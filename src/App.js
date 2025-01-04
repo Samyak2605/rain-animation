@@ -1,66 +1,89 @@
-import React, { useState, useEffect } from "react";
-import "./App.css";
-
-const GRID_ROWS = 20;
-const GRID_COLS = 15;
+import React, { useState, useEffect } from 'react';
+import './App.css';
 
 function App() {
   const [raindrops, setRaindrops] = useState([]);
+  const GRID_SIZE = {
+    rows: 15,
+    cols: 20
+  };
+
+  const COLORS = [
+    '#4CAF50', // Green
+    '#2196F3', // Blue
+    '#9C27B0', // Purple
+    '#F44336', // Red
+    '#FFC107'  // Yellow
+  ];
 
   useEffect(() => {
-    const generateRaindrops = () => {
-      const drops = Array.from({ length: GRID_COLS }, () => ({
-        row: Math.floor(Math.random() * GRID_ROWS),
-        col: Math.floor(Math.random() * GRID_COLS),
-        color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+    const createVerticalGroup = () => {
+      const groupSize = Math.floor(Math.random() * 2) + 4; // Random size between 4-5
+      const col = Math.floor(Math.random() * GRID_SIZE.cols);
+      const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+      const groupId = Math.random();
+
+      // Create a vertical group starting from top
+      return Array.from({ length: groupSize }, (_, index) => ({
+        id: `${groupId}-${index}`,
+        col: col,
+        row: -index, // Start above the grid and fall in
+        color,
+        groupId
       }));
-      setRaindrops(drops);
     };
 
-    generateRaindrops();
+    const updateRaindrops = () => {
+      setRaindrops(prevDrops => {
+        // Move existing drops down
+        const updatedDrops = prevDrops
+          .map(drop => ({
+            ...drop,
+            row: drop.row + 1
+          }))
+          .filter(drop => drop.row < GRID_SIZE.rows);
 
-    const interval = setInterval(() => {
-      setRaindrops((prevDrops) =>
-        prevDrops.map((drop) => {
-          let newRow = drop.row + 1;
-          if (newRow >= GRID_ROWS) newRow = 0; // Reset to top
-          return { ...drop, row: newRow };
-        })
-      );
-    }, 200); // Adjust speed of raindrop movement
+        // Add new vertical groups randomly
+        if (Math.random() < 0.1) {
+          const newGroup = createVerticalGroup();
+          updatedDrops.push(...newGroup);
+        }
 
-    return () => clearInterval(interval);
+        return updatedDrops;
+      });
+    };
+
+    const intervalId = setInterval(updateRaindrops, 150);
+    return () => clearInterval(intervalId);
   }, []);
+
+  const renderGrid = () => {
+    const grid = [];
+    for (let row = 0; row < GRID_SIZE.rows; row++) {
+      for (let col = 0; col < GRID_SIZE.cols; col++) {
+        const raindrop = raindrops.find(drop => drop.row === row && drop.col === col);
+        grid.push(
+          <div
+            key={`${row}-${col}`}
+            className={`grid-cell ${raindrop ? 'active' : ''}`}
+            style={{
+              backgroundColor: raindrop ? raindrop.color : 'transparent'
+            }}
+          />
+        );
+      }
+    }
+    return grid;
+  };
 
   return (
     <div className="app">
-      <div className="grid">
-        {Array.from({ length: GRID_ROWS }).map((_, rowIndex) => (
-          <div key={rowIndex} className="row">
-            {Array.from({ length: GRID_COLS }).map((_, colIndex) => {
-              const isRaindrop = raindrops.some(
-                (drop) => drop.row === rowIndex && drop.col === colIndex
-              );
-              const dropColor = isRaindrop
-                ? raindrops.find(
-                    (drop) => drop.row === rowIndex && drop.col === colIndex
-                  )?.color
-                : "";
-
-              return (
-                <div
-                  key={`${rowIndex}-${colIndex}`}
-                  className={`cell ${isRaindrop ? "raindrop" : ""}`}
-                  style={{ backgroundColor: isRaindrop ? dropColor : "" }}
-                ></div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-      <div className="game-ui">
-        <h1 className="title">Rainfall Animation</h1>
-        <p className="description">A soothing, dynamic rain effect.</p>
+      <div className="container">
+        <h1>Rainfall Animation</h1>
+        <p className="subtitle">A soothing, dynamic rain effect</p>
+        <div className="grid-container">
+          {renderGrid()}
+        </div>
       </div>
     </div>
   );
